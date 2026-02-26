@@ -5,11 +5,17 @@ import pandas as pd
 import json
 import numpy as np
 from datetime import datetime
+import os
+
+# 获取脚本所在目录
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 
 class ExcelToJsonConverter:
     def __init__(self):
-        self.indicators_file = "/Users/fanshengxia/Desktop/市场观点美化/asset-analysis-real-data/指标值.xlsx"
-        self.trends_file = "/Users/fanshengxia/Desktop/市场观点美化/asset-analysis-real-data/近1月净值走势.xlsx"
+        # 使用 data 目录下的 Excel 文件
+        self.indicators_file = os.path.join(SCRIPT_DIR, "指标值.xlsx")
+        self.trends_file = os.path.join(SCRIPT_DIR, "近1月净值走势.xlsx")
         
         # 大类资产映射
         self.category_mapping = {
@@ -106,7 +112,7 @@ class ExcelToJsonConverter:
                 vs_median = ((current / median) - 1) * 100 if median != 0 else 0
 
                 # 锁汇成本相关指标需要更高精度
-                if asset_name == '锁汇成本' and row['观察指标（近三年）'] == '锁汇成本':
+                if asset_name == '锁汇成本' and row['观察指标（近五年）'] == '锁汇成本':
                     precision = 6  # 保留6位小数
                 else:
                     precision = 4  # 其他指标保留4位小数
@@ -114,7 +120,7 @@ class ExcelToJsonConverter:
                 indicator_data = {
                     "category": category or "未知",
                     "subcategory": asset_name,
-                    "indicator": row['观察指标（近三年）'],
+                    "indicator": row['观察指标（近五年）'],
                     "current": round(current, precision),
                     "max": round(float(row['最大值']) if pd.notna(row['最大值']) else 0, precision),
                     "min": round(float(row['最小值']) if pd.notna(row['最小值']) else 0, precision),
@@ -188,16 +194,16 @@ class ExcelToJsonConverter:
             
             # 5. 保存JSON文件
             # 保存到前端资源目录
-            frontend_data_path = "/Users/fanshengxia/Desktop/市场观点美化/asset-analysis-real-data/asset-analysis-dashboard/src/assets/asset_data.json"
+            frontend_data_path = os.path.join(PROJECT_ROOT, "asset-analysis-real-data/asset-analysis-dashboard/src/assets/asset_data.json")
             self.save_json(combined_data, frontend_data_path)
-            
-            # 也保存一份到根目录
-            root_data_path = "/Users/fanshengxia/Desktop/市场观点美化/asset-analysis-real-data/updated_asset_data.json"
-            self.save_json(combined_data, root_data_path)
+
+            # 也保存一份到 data 目录
+            data_backup_path = os.path.join(SCRIPT_DIR, "asset_data.json")
+            self.save_json(combined_data, data_backup_path)
             
             print("数据转换完成！")
             print(f"前端数据文件: {frontend_data_path}")
-            print(f"备份数据文件: {root_data_path}")
+            print(f"备份数据文件: {data_backup_path}")
             
             # 显示统计信息
             total_assets = sum(len(assets) for category, assets in combined_data.items() if category != "last_updated")
