@@ -30,6 +30,21 @@ const EquitySection = ({ data }) => {
     );
   };
 
+  const calculateAnnualizedVolatility = (priceData) => {
+    if (!priceData || priceData.length < 2) return null;
+    const prices = priceData.map(item => item.price);
+    const returns = [];
+    for (let i = 1; i < prices.length; i++) {
+      if (prices[i - 1] !== 0) {
+        returns.push((prices[i] - prices[i - 1]) / prices[i - 1]);
+      }
+    }
+    if (returns.length < 2) return null;
+    const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+    const variance = returns.reduce((sum, r) => sum + (r - mean) ** 2, 0) / (returns.length - 1);
+    return Math.sqrt(variance) * Math.sqrt(252) * 100;
+  };
+
   const createSimpleTrendChart = (priceData, title) => {
     if (!priceData || priceData.length === 0) {
       return (
@@ -115,6 +130,28 @@ const EquitySection = ({ data }) => {
           <span>{priceData[0]?.date}</span>
           <span>{priceData[priceData.length - 1]?.date}</span>
         </div>
+
+        {/* 近1月年化波动率 */}
+        {(() => {
+          const vol = calculateAnnualizedVolatility(priceData);
+          if (vol === null) return null;
+          const volColor = vol < 5
+            ? 'text-green-700 bg-green-50 border-green-200'
+            : vol < 15
+              ? 'text-amber-700 bg-amber-50 border-amber-200'
+              : 'text-red-700 bg-red-50 border-red-200';
+          return (
+            <div className="mt-2 pt-1.5 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-xs text-gray-500 flex items-center gap-1">
+                <span className="text-[11px] font-bold text-gray-400 leading-none">σ</span>
+                近1月年化波动率
+              </span>
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${volColor}`}>
+                {vol.toFixed(2)}%
+              </span>
+            </div>
+          );
+        })()}
       </div>
     );
   };
