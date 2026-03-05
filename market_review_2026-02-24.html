@@ -1,0 +1,215 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大类资产行情分析 - 2026-02-24</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .asset-card { transition: all 0.2s; }
+        .asset-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .percentile-bar { height: 6px; border-radius: 3px; background: #e5e7eb; overflow: hidden; }
+        .percentile-fill { height: 100%; border-radius: 3px; }
+        .category-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .sparkline { width: 100px; height: 30px; }
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- 标题 -->
+        <div class="card p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">大类资产行情分析</h1>
+                    <p class="text-gray-500 mt-1">数据截止日期: <span id="dataDate">2026-02-24</span></p>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-gray-500">兴银理财多资产投资部</div>
+                    <div class="text-xs text-gray-400 mt-1">数据来源: Wind</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 汇总指标 -->
+        <div class="grid grid-cols-4 gap-4 mb-6" id="summaryCards">
+            <div class="card p-4">
+                <div class="text-sm text-gray-500">权益最高估值</div>
+                <div class="text-lg font-bold text-purple-600">中证500: 97.1%</div>
+            </div>
+            <div class="card p-4">
+                <div class="text-sm text-gray-500">权益最低估值</div>
+                <div class="text-lg font-bold text-blue-600">纳斯达克: 69.4%</div>
+            </div>
+            <div class="card p-4">
+                <div class="text-sm text-gray-500">国债收益率</div>
+                <div class="text-lg font-bold text-green-600">10Y: 1.80%</div>
+            </div>
+            <div class="card p-4">
+                <div class="text-sm text-gray-500">人民币汇率</div>
+                <div class="text-lg font-bold text-pink-600">USDCNH: 6.88</div>
+            </div>
+        </div>
+
+        <!-- 权益类资产 -->
+        <div class="card p-6 mb-6">
+            <div class="category-header text-white p-4 -m-6 mb-4 rounded-t-xl">
+                <h2 class="text-lg font-bold">权益市场</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="p-3 text-left font-medium text-gray-600">指数</th>
+                            <th class="p-3 text-right font-medium text-gray-600">当前值</th>
+                            <th class="p-3 text-right font-medium text-gray-600">分位数</th>
+                            <th class="p-3 text-right font-medium text-gray-600">vs中位数</th>
+                            <th class="p-3 text-left font-medium text-gray-600">近一月走势</th>
+                        </tr>
+                    </thead>
+                    <tbody id="equityTable">
+                        <!-- JS动态填充 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 固收类资产 -->
+        <div class="card p-6 mb-6">
+            <div class="category-header text-white p-4 -m-6 mb-4 rounded-t-xl" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                <h2 class="text-lg font-bold">固定收益</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="p-3 text-left font-medium text-gray-600">债券类型</th>
+                            <th class="p-3 text-right font-medium text-gray-600">收益率(%)</th>
+                            <th class="p-3 text-right font-medium text-gray-600">分位数</th>
+                            <th class="p-3 text-left font-medium text-gray-600">近一月走势</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bondTable">
+                        <!-- JS动态填充 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 外汇与商品 -->
+        <div class="card p-6">
+            <div class="category-header text-white p-4 -m-6 mb-4 rounded-t-xl" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <h2 class="text-lg font-bold">外汇与商品</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="p-3 text-left font-medium text-gray-600">品种</th>
+                            <th class="p-3 text-right font-medium text-gray-600">当前值</th>
+                            <th class="p-3 text-right font-medium text-gray-600">分位数</th>
+                            <th class="p-3 text-left font-medium text-gray-600">近一月走势</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fxTable">
+                        <!-- JS动态填充 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 简化的数据 - 使用JSON数据填充
+        const equityData = [
+            { name: '沪深300', value: 4707.54, percentile: 89.7, change: '+17.8%', trend: [4707,4706,4718,4754,4706,4706,4606,4660,4699,4670,4644,4644,4719,4724,4714,4720,4660,4660,4691,4671,4672,4676,4676,4750,4730,4708] },
+            { name: '中证500', value: 8392.91, percentile: 97.1, change: '+41.8%', trend: [8507,8549,8601,8444,8421,8421,8096,8173,8245,8164,8129,8129,8400,8347,8313,8287,8194,8194,8271,8236,8251,8305,8305,8408,8353,8393] },
+            { name: '中证1000', value: 8299.77, percentile: 96.3, change: '+35.2%', trend: [8365,8382,8400,8274,8247,8247,7944,8016,8094,8010,7974,7974,8263,8218,8182,8153,8058,8058,8147,8108,8125,8193,8193,8314,8259,8300] },
+            { name: '创业板指', value: 3308.26, percentile: 90.9, change: '+49.7%', trend: [3240,3276,3288,3288,3251,3251,3148,3182,3226,3187,3157,3157,3277,3261,3247,3237,3187,3187,3234,3213,3227,3254,3254,3304,3281,3308] },
+            { name: '科创50', value: 1465.37, percentile: 88.1, change: '+39.8%', trend: [1414,1435,1443,1448,1432,1432,1376,1394,1418,1402,1388,1388,1452,1447,1442,1438,1408,1408,1432,1419,1426,1440,1440,1477,1467,1465] },
+            { name: '恒生指数', value: 26590.32, percentile: 87.3, change: '+35.5%', trend: [27397,27367,27172,27292,27365,27365,27466,27190,27288,27289,27195,27195,27295,27349,27175,26910,26865,26865,26605,26525,26786,27024,27024,26733,26740,26590] },
+            { name: '标普500', value: 6890.07, percentile: 86.4, change: '+65.0%', trend: [7011,7051,7117,7111,7088,7088,7031,7046,7026,7035,6971,6971,7051,7061,7069,7053,7004,7004,7086,7089,7099,7125,7125,7104,7125,6890] },
+            { name: '纳斯达克', value: 22863.68, percentile: 69.4, change: '+42.5%', trend: [24399,24703,25105,25095,25026,25026,24485,24475,24502,24437,24074,24074,24445,24450,24512,24434,24140,24140,24595,24610,24670,24823,24823,24719,24761,22864] },
+            { name: '日经225', value: 57321.09, percentile: 98.7, change: '+102.1%', trend: [57751,57965,58349,58268,58244,58244,58640,58494,58709,58527,58303,58303,58833,58796,58794,58428,57971,57971,58334,57702,57381,57498,57498,57410,57199,57321] },
+            { name: '德国DAX', value: 24986.25, percentile: 95.3, change: '+62.3%', trend: [25370,25590,25621,25551,25501,25501,25512,25628,25460,25486,25376,25376,25535,25433,25304,25118,24941,24941,25089,24878,24722,24890,24890,24984,24981,24986] },
+            { name: '英国富时100', value: 10680.59, percentile: 93.0, change: '+48.6%', trend: [10932,10948,11015,10998,10979,10979,10897,10908,10933,10895,10880,10880,10868,10837,10838,10793,10737,10737,10789,10750,10719,10722,10722,10773,10764,10681] },
+            { name: '法国CAC40', value: 8519.21, percentile: 87.4, change: '+43.5%', trend: [8662,8728,8742,8750,8732,8732,8694,8701,8690,8650,8628,8628,8653,8624,8586,8540,8499,8499,8503,8465,8425,8453,8453,8492,8489,8519] }
+        ];
+
+        const bondData = [
+            { name: '国债10Y', value: 1.80, percentile: 1.4, trend: [1.65,1.66,1.68,1.66,1.68,1.68,1.72,1.71,1.73,1.72,1.74,1.74,1.77,1.77,1.76,1.77,1.79,1.79,1.80,1.80,1.80,1.79,1.79,1.80,1.80,1.80] },
+            { name: '国债5Y', value: 1.54, percentile: 1.0, trend: [1.41,1.42,1.44,1.43,1.44,1.44,1.47,1.47,1.48,1.47,1.49,1.49,1.51,1.51,1.50,1.51,1.52,1.52,1.53,1.53,1.53,1.53,1.53,1.54,1.54,1.54] },
+            { name: '国债1Y', value: 1.32, percentile: 1.7, trend: [1.26,1.27,1.28,1.27,1.28,1.28,1.30,1.30,1.30,1.29,1.30,1.30,1.31,1.31,1.30,1.30,1.31,1.31,1.32,1.32,1.32,1.32,1.32,1.32,1.32,1.32] },
+            { name: '国开10Y', value: 1.95, percentile: 2.1, trend: [1.80,1.81,1.83,1.82,1.83,1.83,1.86,1.86,1.87,1.86,1.88,1.88,1.91,1.91,1.91,1.91,1.93,1.93,1.94,1.94,1.94,1.94,1.94,1.95,1.95,1.95] },
+            { name: '国开5Y', value: 1.74, percentile: 2.6, trend: [1.60,1.61,1.63,1.62,1.63,1.63,1.66,1.66,1.67,1.66,1.68,1.68,1.71,1.71,1.70,1.71,1.72,1.72,1.73,1.73,1.73,1.73,1.73,1.74,1.74,1.74] }
+        ];
+
+        const fxData = [
+            { name: 'USDCNH', value: 6.88, percentile: 6.2, trend: [6.95,6.93,6.94,6.95,6.95,6.95,6.96,6.94,6.93,6.91,6.89,6.89,6.89,6.88,6.87,6.86,6.86,6.86,6.86,6.86,6.86,6.86,6.86,6.86,6.88,6.88] },
+            { name: '美元指数', value: 97.90, percentile: 2.1, trend: [97.05,95.77,96.35,96.26,96.40,96.40,96.51,97.45,97.28,97.63,97.94,97.94,97.58,97.31,97.05,97.08,97.24,97.24,97.35,97.39,97.29,97.58,97.58,97.56,97.67,97.90] }
+        ];
+
+        // 绘制迷你图
+        function drawSparkline(data, color = '#667eea') {
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            const range = max - min || 1;
+            const width = 100;
+            const height = 30;
+            const points = data.map((v, i) => {
+                const x = (i / (data.length - 1)) * width;
+                const y = height - ((v - min) / range) * height;
+                return `${x},${y}`;
+            }).join(' ');
+            return `<svg class="sparkline" viewBox="0 0 100 30"><polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.5"/></svg>`;
+        }
+
+        // 渲染权益表
+        function renderEquity() {
+            const tbody = document.getElementById('equityTable');
+            tbody.innerHTML = equityData.map(item => {
+                const color = item.percentile > 80 ? 'text-red-600' : item.percentile > 50 ? 'text-orange-600' : 'text-green-600';
+                return `<tr class="border-b hover:bg-gray-50">
+                    <td class="p-3 font-medium">${item.name}</td>
+                    <td class="p-3 text-right">${item.value.toLocaleString()}</td>
+                    <td class="p-3 text-right ${color} font-bold">${item.percentile.toFixed(1)}%</td>
+                    <td class="p-3 text-right">${item.change}</td>
+                    <td class="p-3">${drawSparkline(item.trend)}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // 渲染债券表
+        function renderBond() {
+            const tbody = document.getElementById('bondTable');
+            tbody.innerHTML = bondData.map(item => {
+                return `<tr class="border-b hover:bg-gray-50">
+                    <td class="p-3 font-medium">${item.name}</td>
+                    <td class="p-3 text-right">${item.value.toFixed(2)}%</td>
+                    <td class="p-3 text-right text-green-600 font-bold">${item.percentile.toFixed(1)}%</td>
+                    <td class="p-3">${drawSparkline(item.trend, '#11998e')}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // 渲染外汇表
+        function renderFx() {
+            const tbody = document.getElementById('fxTable');
+            tbody.innerHTML = fxData.map(item => {
+                return `<tr class="border-b hover:bg-gray-50">
+                    <td class="p-3 font-medium">${item.name}</td>
+                    <td class="p-3 text-right">${item.value.toFixed(2)}</td>
+                    <td class="p-3 text-right text-blue-600 font-bold">${item.percentile.toFixed(1)}%</td>
+                    <td class="p-3">${drawSparkline(item.trend, '#f5576c')}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        renderEquity();
+        renderBond();
+        renderFx();
+    </script>
+</body>
+</html>
