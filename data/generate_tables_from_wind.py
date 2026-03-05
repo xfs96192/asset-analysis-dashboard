@@ -780,12 +780,50 @@ def format_excel(file_path, is_indicators=False):
 
 # ==================== 主程序 ====================
 
+def generate_3y_prices():
+    """生成近3年净值走势.xlsx（用于前端计算波动率分位数）"""
+    print("\n生成近3年净值走势（波动率分位数基础数据）...")
+
+    START_DATE_3Y = END_DATE - timedelta(days=365 * 3 + 40)  # 额外40天buffer供滚动窗口使用
+
+    codes = list(WIND_CODES["daily"].keys())
+    df = fetch_daily_data(codes, START_DATE_3Y, END_DATE)
+
+    if df is None:
+        print("⚠️ 近3年数据获取失败，跳过")
+        return False
+
+    # 计算锁汇成本
+    if "USDCNY1YS.IB" in df.columns and "USDCNH.FX" in df.columns:
+        df['锁汇成本'] = df.apply(
+            lambda row: calculate_fx_hedging_cost(row["USDCNY1YS.IB"], row["USDCNH.FX"]),
+            axis=1
+        )
+        df = df.drop(columns=["USDCNY1YS.IB", "USDCNH.FX"])
+
+    name_mapping = {code: WIND_CODES["daily"][code] for code in codes if code in WIND_CODES["daily"]}
+    df = df.rename(columns=name_mapping)
+
+    output_path = f"{OUTPUT_DIR}/近3年净值走势.xlsx"
+    df.index.name = "日期"
+    df.to_excel(output_path)
+    format_excel(output_path, is_indicators=False)
+
+    print(f"✓ 已生成: {output_path}")
+    print(f"  - 交易日数: {len(df)}")
+
+    return True
+
+
 def main():
     try:
         # 生成近1月净值走势
         if not generate_recent_prices():
             print("\n❌ 近1月净值走势生成失败")
             return
+
+        # 生成近3年净值走势（用于波动率分位数）
+        generate_3y_prices()  # 非关键步骤，失败不中断流程
 
         # 生成指标值
         if not generate_indicators():
@@ -797,7 +835,8 @@ def main():
         print("=" * 80)
         print(f"\n输出目录: {OUTPUT_DIR}")
         print("  1. 近1月净值走势.xlsx")
-        print("  2. 指标值.xlsx")
+        print("  2. 近3年净值走势.xlsx  ← 新增（波动率分位数数据）")
+        print("  3. 指标值.xlsx")
 
     except Exception as e:
         print(f"\n❌ 错误: {e}")

@@ -30,14 +30,10 @@ const EquitySection = ({ data }) => {
     );
   };
 
-  const calculateAnnualizedVolatility = (priceData) => {
-    if (!priceData || priceData.length < 2) return null;
-    const prices = priceData.map(item => item.price);
+  const computeWindowVol = (prices) => {
     const returns = [];
     for (let i = 1; i < prices.length; i++) {
-      if (prices[i - 1] !== 0) {
-        returns.push((prices[i] - prices[i - 1]) / prices[i - 1]);
-      }
+      if (prices[i - 1] !== 0) returns.push((prices[i] - prices[i - 1]) / prices[i - 1]);
     }
     if (returns.length < 2) return null;
     const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
@@ -45,7 +41,28 @@ const EquitySection = ({ data }) => {
     return Math.sqrt(variance) * Math.sqrt(252) * 100;
   };
 
-  const createSimpleTrendChart = (priceData, title) => {
+  const calculateAnnualizedVolatility = (priceData) => {
+    if (!priceData || priceData.length < 2) return null;
+    return computeWindowVol(priceData.map(item => item.price));
+  };
+
+  const calculateVolPercentile = (priceSeries3y) => {
+    if (!priceSeries3y || priceSeries3y.length < 44) return null;
+    const prices = priceSeries3y.map(item => item.price);
+    const W = 22; // 22 prices → 21 daily returns → 1-month vol
+    const rollingVols = [];
+    for (let i = W; i <= prices.length; i++) {
+      const vol = computeWindowVol(prices.slice(i - W, i));
+      if (vol !== null) rollingVols.push(vol);
+    }
+    if (rollingVols.length < 2) return null;
+    const currentVol = rollingVols[rollingVols.length - 1];
+    let count = 0;
+    for (const v of rollingVols) { if (v <= currentVol) count++; }
+    return { percentile: Math.max(0, Math.min(100, ((count - 1) / (rollingVols.length - 1)) * 100)) };
+  };
+
+  const createSimpleTrendChart = (priceData, title, priceSeries3y) => {
     if (!priceData || priceData.length === 0) {
       return (
         <div className="h-48 flex items-center justify-center text-gray-500">
@@ -131,7 +148,7 @@ const EquitySection = ({ data }) => {
           <span>{priceData[priceData.length - 1]?.date}</span>
         </div>
 
-        {/* 近1月年化波动率 */}
+        {/* 近1月年化波动率 & 近3年分位数 */}
         {(() => {
           const vol = calculateAnnualizedVolatility(priceData);
           if (vol === null) return null;
@@ -140,15 +157,34 @@ const EquitySection = ({ data }) => {
             : vol < 15
               ? 'text-amber-700 bg-amber-50 border-amber-200'
               : 'text-red-700 bg-red-50 border-red-200';
+          const volStats = calculateVolPercentile(priceSeries3y);
+          const pos = volStats ? Math.max(0, Math.min(100, volStats.percentile)) : null;
           return (
-            <div className="mt-2 pt-1.5 border-t border-gray-100 flex items-center justify-between">
-              <span className="text-xs text-gray-500 flex items-center gap-1">
-                <span className="text-[11px] font-bold text-gray-400 leading-none">σ</span>
-                近1月年化波动率
-              </span>
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${volColor}`}>
-                {vol.toFixed(2)}%
-              </span>
+            <div className="mt-2 pt-1.5 border-t border-gray-100">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500 flex items-center gap-1">
+                  <span className="text-[11px] font-bold text-gray-400 leading-none">σ</span>
+                  近1月年化波动率
+                </span>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${volColor}`}>
+                  {vol.toFixed(2)}%
+                </span>
+              </div>
+              {pos !== null && (
+                <div className="mt-1.5">
+                  <div className="relative">
+                    <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full" style={{ width: `${pos}%`, background: 'linear-gradient(to right, #10B981 0%, #F59E0B 50%, #EF4444 100%)' }} />
+                    </div>
+                    <div className="absolute top-1/2 transform -translate-y-1/2 w-2.5 h-2.5 bg-white border-2 border-gray-400 rounded-full shadow-sm" style={{ left: `${pos}%`, marginLeft: '-5px' }} />
+                  </div>
+                  <div className="flex justify-between text-[9px] text-gray-400 mt-0.5">
+                    <span>低波动</span>
+                    <span className="font-medium text-gray-500">{pos.toFixed(1)}分位 · 近3年</span>
+                    <span>高波动</span>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })()}
@@ -203,7 +239,7 @@ const EquitySection = ({ data }) => {
             <div className="bg-white rounded-md p-2 shadow-sm h-full">
               <h4 className="text-xs font-medium text-gray-700 mb-1">近一个月走势</h4>
               <div className="text-xs text-gray-500 mb-1">{assetName}</div>
-              {createSimpleTrendChart(assetData.price_series, assetName)}
+              {createSimpleTrendChart(assetData.price_series, assetName, assetData.price_series_3y)}
             </div>
           </div>
         </div>

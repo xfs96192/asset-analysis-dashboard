@@ -16,6 +16,7 @@ class ExcelToJsonConverter:
         # 使用 data 目录下的 Excel 文件
         self.indicators_file = os.path.join(SCRIPT_DIR, "指标值.xlsx")
         self.trends_file = os.path.join(SCRIPT_DIR, "近1月净值走势.xlsx")
+        self.trends_3y_file = os.path.join(SCRIPT_DIR, "近3年净值走势.xlsx")
         
         # 大类资产映射
         self.category_mapping = {
@@ -28,19 +29,46 @@ class ExcelToJsonConverter:
     def load_data(self):
         """加载Excel数据"""
         print("正在加载Excel数据...")
-        
+
         # 读取指标值数据
         self.df_indicators = pd.read_excel(self.indicators_file)
         print(f"指标数据加载完成: {self.df_indicators.shape[0]} 行")
-        
-        # 读取净值走势数据
+
+        # 读取近1月净值走势数据
         self.df_trends = pd.read_excel(self.trends_file)
         print(f"走势数据加载完成: {self.df_trends.shape[0]} 行")
-        
+
+        # 读取近3年净值走势数据（可选，用于波动率分位数计算）
+        self.df_trends_3y = None
+        if os.path.exists(self.trends_3y_file):
+            self.df_trends_3y = pd.read_excel(self.trends_3y_file)
+            print(f"近3年走势数据加载完成: {self.df_trends_3y.shape[0]} 行")
+        else:
+            print("⚠️ 未找到近3年净值走势.xlsx，跳过波动率分位数数据（运行 generate_tables_from_wind.py 可生成）")
+
         return True
     
+    def _parse_price_series(self, df):
+        """将DataFrame解析为price_series列表（内部共用方法）"""
+        date_column = df.columns[0]
+        result = {}
+        for asset_name in df.columns[1:]:
+            if pd.isna(df[asset_name]).all():
+                continue
+            series = []
+            for _, row in df.iterrows():
+                date_val = row[date_column]
+                price_val = row[asset_name]
+                if pd.isna(date_val) or pd.isna(price_val):
+                    continue
+                date_str = date_val if isinstance(date_val, str) else date_val.strftime('%Y-%m-%d')
+                precision = 6 if asset_name == '锁汇成本' else 2
+                series.append({'date': date_str, 'price': round(float(price_val), precision)})
+            result[asset_name] = series
+        return result
+
     def process_trends_data(self):
-        """处理净值走势数据"""
+        """处理近1月净值走势数据"""
         print("正在处理净值走势数据...")
         
         # 将第一列作为日期，其他列作为资产价格
@@ -138,28 +166,32 @@ class ExcelToJsonConverter:
         
         return indicators_data
     
-    def combine_data(self, indicators_data, trends_data):
+    def combine_data(self, indicators_data, trends_data, trends_3y_data=None):
         """合并指标数据和走势数据"""
         print("正在合并数据...")
-        
+
         combined_data = {}
-        
+
         # 按大类资产分组
         categories = {}
-        
+
         for asset_name, asset_data in indicators_data.items():
             category = asset_data["category"]
             category_en = self.category_mapping.get(category, "other")
-            
+
             if category_en not in categories:
                 categories[category_en] = {}
-            
+
             # 合并指标数据和走势数据
             asset_combined = {
                 "indicators": asset_data["indicators"],
                 "price_series": trends_data.get(asset_name, [])
             }
-            
+
+            # 添加近3年走势数据（若存在）
+            if trends_3y_data and asset_name in trends_3y_data:
+                asset_combined["price_series_3y"] = trends_3y_data[asset_name]
+
             categories[category_en][asset_name] = asset_combined
         
         # 添加时间戳
@@ -185,12 +217,20 @@ class ExcelToJsonConverter:
             
             # 2. 处理走势数据
             trends_data = self.process_trends_data()
-            
+
             # 3. 处理指标数据
             indicators_data = self.process_indicators_data()
-            
-            # 4. 合并数据
-            combined_data = self.combine_data(indicators_data, trends_data)
+
+            # 4. 处理近3年走势数据（用于波动率分位数）
+            trends_3y_data = None
+            if self.df_trends_3y is not None:
+                print("正在处理近3年走势数据...")
+                trends_3y_data = self._parse_price_series(self.df_trends_3y)
+                total_3y_points = sum(len(v) for v in trends_3y_data.values())
+                print(f"近3年走势数据处理完成: {len(trends_3y_data)} 个资产, 共 {total_3y_points} 个数据点")
+
+            # 5. 合并数据
+            combined_data = self.combine_data(indicators_data, trends_data, trends_3y_data)
             
             # 5. 保存JSON文件
             # 保存到前端资源目录
